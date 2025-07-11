@@ -9,13 +9,13 @@ def load_data():
     return df
 
 #
-# Print the head.
+# Describe the dataset
 #
 def describe(df):
     print(df.head())
     print(df.shape)
     df.info()
-    df.describe().T[['mean', 'std', 'min', 'max']].round(2).sort_values('mean')
+    df.describe().T[['mean', 'std', 'min', 'max']]
     
     
 
