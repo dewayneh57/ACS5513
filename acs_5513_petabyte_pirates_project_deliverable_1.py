@@ -434,6 +434,8 @@ df['Has Deck'] = df['Wood Deck SF'].apply(lambda x: 1 if x > 0 else 0)
 df['Has Garage'] = df['Garage Area'].apply(lambda x: 1 if x > 0 else 0)
 df['Has Remodeled'] = df.apply(lambda row: 1 if row['Year Remod/Add'] > row['Year Built'] else 0, axis=1)
 
+# Multiplicative
+
 
 # Time
 df['Season Sold'] = df['Mo Sold'].apply(lambda x: 'Winter' if x in [12, 1, 2]
@@ -502,6 +504,45 @@ print("Correlation with 'Has Remodeled':", correlation_has_remodeled)
 numeric_cols = df.select_dtypes(include=np.number).columns
 corr_matrix = df[numeric_cols].corr()
 corr_matrix['SalePrice'].sort_values(ascending=False)
+
+# Look at multiplicatives of the engineered binary features, checking for
+# pearson correlation coefficient.
+from itertools import combinations
+
+binary_features = [
+    'Has Basement',
+    'Has Central Air',
+    'Has Pool',
+    'Has Fireplace',
+    'Has Porch',
+    'Has Deck',
+    'Has Garage',
+    'Has Remodeled'
+]
+
+# Create a dictionary to store the correlations
+combination_correlations = {}
+
+# Iterate through all two-pair combinations
+for feature1, feature2 in combinations(binary_features, 2):
+    # Create the combined feature
+    combined_feature_name = f'{feature1}_and_{feature2}'
+    df[combined_feature_name] = df[feature1] * df[feature2]
+
+    # Calculate the Pearson correlation coefficient with 'SalePrice'
+    correlation = df[combined_feature_name].corr(df['SalePrice'])
+
+    # Store the correlation
+    combination_correlations[combined_feature_name] = correlation
+
+# Print the correlations
+print("Pearson Correlation Coefficients for Two-Pair Combinations of Engineered Binary Features:")
+for combo, corr in combination_correlations.items():
+    print(f"{combo}: {corr:.4f}")
+
+# Iteratively drop the combined correlation features. No real added value.
+for combo, corr in combination_correlations.items():
+    df.drop(columns=[combo], inplace=True)
 
 # drop values where Total SF > 6000 (3 total outliers)
 df.drop(df[df['Total SF'] > 6000].index, inplace=True)
@@ -658,10 +699,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 # drop values where Total SF > 6000 (3 total outliers)
-df.drop(df[df['Total SF'] > 6000].index, inplace=True)
+df_cleaned.drop(df_cleaned[df_cleaned['Total SF'] > 6000].index, inplace=True)
 
 # drop values where Qual x SF is NaN (one record)
-df.dropna(subset=['Qual x SF'], inplace=True)
+df_cleaned.dropna(subset=['Qual x SF'], inplace=True)
 
 # Set seed
 seed = 123
@@ -670,8 +711,8 @@ seed = 123
 test_p = 0.20
 
 # Set the features
-X = df[['Qual x SF']]
-y = df['SalePrice']
+X = df_cleaned[['Qual x SF']]
+y = df_cleaned['SalePrice']
 
 # Define training and test data
 X_train, X_test, y_train, y_test = train_test_split(
