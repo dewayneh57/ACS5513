@@ -1,8 +1,7 @@
 from flask import Blueprint, request, jsonify
-from app.services.pricing_engine import PricingEngine
 
+from flask import current_app
 api = Blueprint('api', __name__)
-pricing_engine = PricingEngine()
 
 @api.route('/api/train', methods=['POST'])
 def train():
@@ -13,7 +12,7 @@ def train():
     if not features or not prices:
         return jsonify({'error': 'Features and prices are required'}), 400
     
-    pricing_engine.train_model(features, prices)
+    current_app.pricing_engine.train_model(features, prices)
     return jsonify({'message': 'Model trained successfully'}), 200
 
 @api.route('/api/predict', methods=['POST'])
@@ -36,7 +35,7 @@ def predict():
             return jsonify({'error': 'Features are required for prediction'}), 400
 
     try:
-        price = pricing_engine.predict_price(features)
+        price = current_app.pricing_engine.predict_price(features)
         message = "Price generated successfully."
     except Exception as e:
         price = None
