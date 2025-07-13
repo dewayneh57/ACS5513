@@ -4,11 +4,11 @@ def create_app():
     app = Flask(__name__)
     
     # Load configuration
-    app.config.from_object('config.Config')
+    app.config.from_object('app.config.Config')
     
     # Register blueprints
-    from .routes import main as main_blueprint
-    app.register_blueprint(main_blueprint)
+    from .routes import api
+    app.register_blueprint(api)
     
     return app
 
