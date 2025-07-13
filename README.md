@@ -61,6 +61,7 @@ You can open and run the Jupyter notebooks in Google Colab or locally with Jupyt
 
 - Sean Miller
 - Dewayne Hofenstien
+- Farhan Hassan 
 
 ## Data Sources
 
