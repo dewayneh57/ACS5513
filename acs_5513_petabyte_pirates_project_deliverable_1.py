@@ -14,6 +14,8 @@ Original file is located at
 **Petabyte Pirates (Team A)**
 
 **Source:** https://www.kaggle.com/datasets/prevek18/ames-housing-dataset
+
+## Initial Imports and Data Sourcing
 """
 
 # imports
@@ -42,6 +44,13 @@ df.head(20)
 df.info(verbose=False)
 df.describe().T[['mean','std','min','max']]
 
+"""## Data Processing and EDA
+
+### Process Missing and Harcoded NaN Values
+
+**Result:** All hardcoded "NaN" string values have been properly typed with nulls. Features with > 60% missing values have been marked for deletion.
+"""
+
 # Convert 'NaN' string literals to missing values prior to missing values analysis.
 object_cols = df.select_dtypes(include='object').columns
 df[object_cols] = df[object_cols].replace("NaN", np.nan)
@@ -50,6 +59,20 @@ df[object_cols] = df[object_cols].replace("NaN", np.nan)
 # Heuristic: if > 60% of values are missing, drop these columns.
 miss = df.isna().mean().sort_values(ascending=False)
 miss.head(25)
+
+"""## Normal Distribution Testing
+
+**Result**: The `SalePrice` distribution is highly right-skewed (1.74), which violates linear regression assumptions. We first removed outliers (Greater than, or less than, 1.5 times the Inter-Quartile Range) which signficantly reduced the skewedness (0.67). We attempted to apply a natural log transformation (`log1p(SalePrice)`) to normalize the distribution and stabilize variance, which resulted in a left-skewed distribution but a slightly improved skewedness value (-0.52).
+
+When evaluating the D'Agostino-Pearson test for normality, the original `SalePrice` with outliers removed produced a better result statistic (176.7) than the log-transformed data (236.6).
+
+For the sake of this deliverable, all analysis and early data modeling moving forward will use the original sale price with outliers removed, and the team can revisit additional transformations during the modeling phase.
+"""
+
+# Normal Distribution Test for Raw Data
+
+statistic, p_value = stats.normaltest(df['SalePrice'])
+print(f"Normaltest (D'Agostino-Pearson): Statistic={statistic:.4f}, p-value={p_value:.4f}")
 
 plt.figure(figsize=(8,4))
 plt.hist(df['SalePrice'], bins=40, color='blue', edgecolor='black')
@@ -60,22 +83,15 @@ plt.show()
 
 print("Skewness:", df['SalePrice'].skew().round(2))
 
-log_df = df.copy()
-log_df['SalePrice'] = np.log(df['SalePrice'])
-
-plt.figure(figsize=(8,4))
-plt.hist(log_df['SalePrice'], bins=40, color='blue', edgecolor='black')
-plt.title('Distribution of Log(SalePrice)')
-plt.xlabel('Log(Sale Price)')
-plt.ylabel('Frequency')
-plt.show()
-
+# Remove outliers
 Q1 = df['SalePrice'].quantile(0.25)
 Q3 = df['SalePrice'].quantile(0.75)
 IQR = Q3 - Q1
 
-lower_bound = Q1 - (2 * IQR)
-upper_bound = Q3 + (2 * IQR)
+lower_bound = Q1 - (1.5 * IQR)
+upper_bound = Q3 + (1.5 * IQR)
+print("Lower Bound:", lower_bound)
+print("Upper Bound:", upper_bound)
 
 outliers = df[(df['SalePrice'] < lower_bound) | (df['SalePrice'] > upper_bound)]
 print("Number of outliers:", len(outliers))
@@ -88,6 +104,36 @@ plt.title('Distribution of SalePrice')
 plt.xlabel('Sale Price ($)')
 plt.ylabel('Frequency')
 plt.show()
+
+print("Skewness:", df['SalePrice'].skew().round(2))
+
+# Re-try Normal Distribution Test for Raw Data (removing outliers)
+
+statistic, p_value = stats.normaltest(df['SalePrice'])
+print(f"Normaltest (D'Agostino-Pearson): Statistic={statistic:.4f}, p-value={p_value:.4f}")
+
+# Apply Log Transformation
+log_df = df.copy()
+log_df['SalePrice'] = np.log1p(log_df['SalePrice'])
+
+plt.figure(figsize=(8,4))
+plt.hist(log_df['SalePrice'], bins=40, color='blue', edgecolor='black')
+plt.title('Distribution of Log(SalePrice)')
+plt.xlabel('Log(Sale Price)')
+plt.ylabel('Frequency')
+plt.show()
+
+print("Skewness:", log_df['SalePrice'].skew().round(2))
+
+# Normal Distribution Test for Log Data
+
+statistic, p_value = stats.normaltest(log_df['SalePrice'])
+print(f"Normaltest (D'Agostino-Pearson): Statistic={statistic:.4f}, p-value={p_value:.4f}")
+
+"""## Time Series Data Analysis
+
+**Result**: While there is clear seasonality in the number of homes sold, there is a moderate pull in `SalePrice` with regards to `Month Sold`. The team will consider whether to incorporate seasonal forecasting, but for now is focused on `SalePrice` prediction.
+"""
 
 # Descriptive Statistics by Year and Month Sold
 
@@ -302,9 +348,9 @@ Walkout and garden-level basements (“Gd”, “Av”) command premium prices o
 #### Fireplace Quality  
 Homes with “Ex” or “Gd” fireplace quality strongly outperform those with missing or poor ratings.
 
-## Review suspect columns
+### Ad-Hoc Review of Suspect Columns
 
-Description: there are columns that appear to have only a few distinct values. Heuristic: if one value has >90% of the data, we will drop these columns.
+**Result**: majority of the suspect columns will be dropped, with the exception of Fireplace Quality, which the absence of a value indicates no fireplaces present in the sold home. This warrants further analysis.
 """
 
 # Just under 50% of values for Fireplace Quality are missing. View counts of records by quality.
@@ -323,15 +369,21 @@ missing_numeric = numeric_cols.isnull().sum()
 print("Missing values in numeric columns:")
 print(missing_numeric[missing_numeric > 0])
 
-"""## Engineered Features
+"""## Data Enrichment and Engineering
 
-### Age
+**Result**: there is clear evidence that several engineered features, such as `Total SF` (Total Square Feet) and subsequently `Qual x SF` (Overall Quality multiplied by Total Square Feet), will be of critical importance during the modeling portion of this project. Any engineered feature with a small Pearson correlation coefficient is dropped.
+
+Final decision and decision justification can be viewed in the [data dictionary](https://docs.google.com/spreadsheets/d/1zRmdRlc2efk0RiQ3xv9OARQlnGgF3sbfwbhnpNbcv7Y/edit?usp=sharing).
+
+### Engineered Features
+
+#### Age
 
 1.   Age of Home at Time of Sale (Yr Sold - Yr Built)
 1.   Time Since Remodel (Yr Sold - Yr Remod or Add)
 1.   Age Bucket
 
-### Size and Quality
+#### Size and Quality
 
 1.   Total Square Feet
 1.   Total Square Feet + Garage
@@ -340,7 +392,7 @@ print(missing_numeric[missing_numeric > 0])
 1.   Price per Square Feet
 1.   Overall Quality x Size
 
-### Binary Features
+#### Binary Features
 1.   Has Basement (0, 1)
 1.   Has Central Air (0, 1)
 1.   Has Fireplace (0, 1)
@@ -349,22 +401,9 @@ print(missing_numeric[missing_numeric > 0])
 1.   Has Garage (0, 1)
 1.   Has Been Remodeled (0, 1), If Year Remod / Add > Year Build then 1 else 0
 
-### Time
+#### Time
 
 1.   Season Sold (calculated by Mo Sold)
-
-## Features with potential high impact on sale price
-
-1.   Lot Size
-1.   Year Built
-1.   Overall Quality
-1.   Overall Condition
-1.   Lot Configuration
-1.   House Style (ex. 1 Story, 2 Story)
-1.   Year Remodeled (Remod / Add)
-1.   Basement Feature
-
-## Data Enrichment and Engineering
 """
 
 # Age
@@ -495,109 +534,6 @@ axes[1, 1].set_ylabel('Sale Price')
 plt.tight_layout()
 plt.show()
 
-"""## Conducting Early Trials
-
-First, we will use a single inear regression model to evaluate the Quality x Square Feet feature. We do not anticipate this will be as strong as multiple linear regression or classifier models.
-"""
-
-# conduct early trial, reviewing
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-
-# drop values where Total SF > 6000 (3 total outliers)
-df.drop(df[df['Total SF'] > 6000].index, inplace=True)
-
-# drop values where Qual x SF is NaN (one record)
-df.dropna(subset=['Qual x SF'], inplace=True)
-
-# Set seed
-seed = 123
-
-# Percent of data reserved for test set
-test_p = 0.20
-
-# Set the features
-X = df[['Qual x SF']]
-y = df['SalePrice']
-
-# Define training and test data
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=test_p, random_state=seed
-)
-
-# Plot training and regression
-plt = sns.regplot(x=X_train, y=y_train, ci=False, line_kws={'color': 'red'})
-plt.set_title('Quality x Square Feet vs. Sale Price')
-plt.set_xlabel('Quality x Square Feet')
-plt.set_ylabel('Sale Price')
-
-# Initialize linear regression model
-model = LinearRegression()
-
-# Fit the model to the training data
-model.fit(X_train, y_train)
-
-# Print model coefficients
-print("Model Coefficients:")
-print(model.coef_)
-print("Model Intercept:")
-print(model.intercept_)
-
-# Regression w/ training data
-y_train_pred = model.predict(X_train)
-mse_train = mean_squared_error(y_train, y_train_pred)
-r2_train = r2_score(y_train, y_train_pred)
-mae_train = mean_absolute_error(y_train, y_train_pred)
-
-# Print the results
-print("Training Results:")
-print(f"Mean Squared Error: {mse_train}")
-print(f"R-squared: {r2_train}")
-print(f"Mean Absolute Error: {mae_train}")
-
-# Regression w/ test data
-y_test_pred = model.predict(X_test)
-mse_test = mean_squared_error(y_test, y_test_pred)
-r2_test = r2_score(y_test, y_test_pred)
-mae_test = mean_absolute_error(y_test, y_test_pred)
-
-# Print the results
-print("Test Results:")
-print(f"Mean Squared Error: {mse_test}")
-print(f"R-squared: {r2_test}")
-print(f"Mean Absolute Error: {mae_test}")
-
-# Plot test and train using subplots
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
-
-# Use model coefficient and y-intercept to define formula for yhat
-yhat_train = model.coef_[0] * X_train + model.intercept_
-
-# Plot training
-axes[0].scatter(X_train, y_train, color='blue', label='Training Data')
-axes[0].plot(X_train, yhat_train, color='red', label='Regression Line')
-axes[0].set_title('Training Data')
-axes[0].set_xlabel('Quality x Square Feet')
-axes[0].set_ylabel('Sale Price')
-axes[0].legend()
-
-# Plot test
-yhat_test = model.coef_[0] * X_test + model.intercept_
-axes[1].scatter(X_test, y_test, color='blue', label='Test Data')
-axes[1].plot(X_test, yhat_test, color='red', label='Regression Line')
-axes[1].set_title('Test Data')
-axes[1].set_xlabel('Quality x Square Feet')
-axes[1].set_ylabel('Sale Price')
-axes[1].legend()
-
-plt.tight_layout()
-plt.show()
-
 # Encode
 ordinal_map = {
     'Ex': 5,
@@ -709,6 +645,109 @@ df_cleaned = df.drop(columns=['Order', 'PID', 'Street', 'Heating', 'Roof Matl',
 df_cleaned = df_cleaned.drop(columns=drop_dummy)
 
 df_cleaned.head()
+
+"""## Conducting Early Trials
+
+First, we will use a single linear regression model to evaluate the Quality x Square Feet feature. We do not anticipate this will be as strong as multiple linear regression or classifier models.
+"""
+
+# conduct early trial, reviewing
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+
+# drop values where Total SF > 6000 (3 total outliers)
+df.drop(df[df['Total SF'] > 6000].index, inplace=True)
+
+# drop values where Qual x SF is NaN (one record)
+df.dropna(subset=['Qual x SF'], inplace=True)
+
+# Set seed
+seed = 123
+
+# Percent of data reserved for test set
+test_p = 0.20
+
+# Set the features
+X = df[['Qual x SF']]
+y = df['SalePrice']
+
+# Define training and test data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=test_p, random_state=seed
+)
+
+# Plot training and regression
+plt = sns.regplot(x=X_train, y=y_train, ci=False, line_kws={'color': 'red'})
+plt.set_title('Quality x Square Feet vs. Sale Price')
+plt.set_xlabel('Quality x Square Feet')
+plt.set_ylabel('Sale Price')
+
+# Initialize linear regression model
+model = LinearRegression()
+
+# Fit the model to the training data
+model.fit(X_train, y_train)
+
+# Print model coefficients
+print("Model Coefficients:")
+print(model.coef_)
+print("Model Intercept:")
+print(model.intercept_)
+
+# Regression w/ training data
+y_train_pred = model.predict(X_train)
+mse_train = mean_squared_error(y_train, y_train_pred)
+r2_train = r2_score(y_train, y_train_pred)
+mae_train = mean_absolute_error(y_train, y_train_pred)
+
+# Print the results
+print("Training Results:")
+print(f"Mean Squared Error: {mse_train}")
+print(f"R-squared: {r2_train}")
+print(f"Mean Absolute Error: {mae_train}")
+
+# Regression w/ test data
+y_test_pred = model.predict(X_test)
+mse_test = mean_squared_error(y_test, y_test_pred)
+r2_test = r2_score(y_test, y_test_pred)
+mae_test = mean_absolute_error(y_test, y_test_pred)
+
+# Print the results
+print("Test Results:")
+print(f"Mean Squared Error: {mse_test}")
+print(f"R-squared: {r2_test}")
+print(f"Mean Absolute Error: {mae_test}")
+
+# Plot test and train using subplots
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
+
+# Use model coefficient and y-intercept to define formula for yhat
+yhat_train = model.coef_[0] * X_train + model.intercept_
+
+# Plot training
+axes[0].scatter(X_train, y_train, color='blue', label='Training Data')
+axes[0].plot(X_train, yhat_train, color='red', label='Regression Line')
+axes[0].set_title('Training Data')
+axes[0].set_xlabel('Quality x Square Feet')
+axes[0].set_ylabel('Sale Price')
+axes[0].legend()
+
+# Plot test
+yhat_test = model.coef_[0] * X_test + model.intercept_
+axes[1].scatter(X_test, y_test, color='blue', label='Test Data')
+axes[1].plot(X_test, yhat_test, color='red', label='Regression Line')
+axes[1].set_title('Test Data')
+axes[1].set_xlabel('Quality x Square Feet')
+axes[1].set_ylabel('Sale Price')
+axes[1].legend()
+
+plt.tight_layout()
+plt.show()
 
 # export df_cleaned to csv
 df_cleaned.to_csv('ACS-5113_Petabyte_Pirates_Deliverable_1.csv', index=False)
