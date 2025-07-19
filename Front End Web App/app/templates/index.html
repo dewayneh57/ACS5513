@@ -110,6 +110,20 @@
         </div>
 
         <div class="form-field">
+          <label for="garage_finish">Garage Finish:</label>
+          <select
+            id="garage_finish"
+            name="garage_finish"
+            title="Garage interior finish level"
+          >
+            <option value="0" selected>No Garage</option>
+            <option value="1">Unfinished</option>
+            <option value="2">Rough Finished</option>
+            <option value="3">Finished</option>
+          </select>
+        </div>
+
+        <div class="form-field">
           <label for="garage_size">Garage Size (sq ft):</label>
           <input
             type="number"
@@ -423,6 +437,40 @@
             hasErrors = true;
           }
 
+          // Validate garage field consistency
+          if (!hasErrors) {
+            var garageCars = parseInt(document.getElementById("garage_cars").value) || 0;
+            var garageFinish = parseInt(document.getElementById("garage_finish").value) || 0;
+            var garageSize = parseFloat(document.getElementById("garage_size").value) || 0;
+
+            // Check for garage field inconsistencies
+            if (garageCars === 0 && (garageFinish > 0 || garageSize > 0)) {
+              addErrorStyling(document.getElementById("garage_cars"));
+              addErrorStyling(document.getElementById("garage_finish"));
+              addErrorStyling(document.getElementById("garage_size"));
+              showValidationMessage("Garage fields are inconsistent. If garage cars is 0, finish must be 'No Garage' and size must be 0.");
+              hasErrors = true;
+            } else if (garageCars > 0 && (garageFinish === 0 || garageSize === 0)) {
+              addErrorStyling(document.getElementById("garage_cars"));
+              addErrorStyling(document.getElementById("garage_finish"));
+              addErrorStyling(document.getElementById("garage_size"));
+              showValidationMessage("Garage fields are inconsistent. If garage has cars, finish cannot be 'No Garage' and size cannot be 0.");
+              hasErrors = true;
+            } else if (garageFinish > 0 && (garageCars === 0 || garageSize === 0)) {
+              addErrorStyling(document.getElementById("garage_cars"));
+              addErrorStyling(document.getElementById("garage_finish"));
+              addErrorStyling(document.getElementById("garage_size"));
+              showValidationMessage("Garage fields are inconsistent. If garage has a finish, cars and size cannot be 0.");
+              hasErrors = true;
+            } else if (garageSize > 0 && (garageCars === 0 || garageFinish === 0)) {
+              addErrorStyling(document.getElementById("garage_cars"));
+              addErrorStyling(document.getElementById("garage_finish"));
+              addErrorStyling(document.getElementById("garage_size"));
+              showValidationMessage("Garage fields are inconsistent. If garage has size, cars cannot be 0 and finish cannot be 'No Garage'.");
+              hasErrors = true;
+            }
+          }
+
           return !hasErrors;
         }
 
@@ -449,6 +497,76 @@
           messageDiv.style.display = "none";
         }
 
+        // Garage field interdependency validation
+        function setupGarageValidation() {
+          var garageCars = document.getElementById("garage_cars");
+          var garageFinish = document.getElementById("garage_finish");
+          var garageSize = document.getElementById("garage_size");
+
+          // Add event listeners for garage fields
+          garageCars.addEventListener("change", validateGarageFields);
+          garageFinish.addEventListener("change", validateGarageFields);
+          garageSize.addEventListener("input", validateGarageFields);
+        }
+
+        function validateGarageFields() {
+          var garageCars = document.getElementById("garage_cars");
+          var garageFinish = document.getElementById("garage_finish");
+          var garageSize = document.getElementById("garage_size");
+
+          var carsValue = parseInt(garageCars.value) || 0;
+          var finishValue = parseInt(garageFinish.value) || 0;
+          var sizeValue = parseFloat(garageSize.value) || 0;
+
+          // Rule 1: If garage cars is 0, then finish must be "No Garage" and size must be 0
+          if (carsValue === 0) {
+            if (finishValue !== 0) {
+              garageFinish.value = "0";
+              showValidationMessage("Garage finish set to 'No Garage' because garage cars is 0.");
+            }
+            if (sizeValue !== 0) {
+              garageSize.value = "0";
+              showValidationMessage("Garage size set to 0 because garage cars is 0.");
+            }
+          }
+          
+          // Rule 2: If garage cars > 0, finish can't be "No Garage" and size can't be 0
+          else if (carsValue > 0) {
+            if (finishValue === 0) {
+              garageFinish.value = "1"; // Default to "Unfinished"
+              showValidationMessage("Garage finish changed from 'No Garage' because garage has " + carsValue + " car(s).");
+            }
+            if (sizeValue === 0) {
+              addErrorStyling(garageSize);
+              showValidationMessage("Please enter a garage size greater than 0 because garage has " + carsValue + " car(s).");
+            }
+          }
+
+          // Rule 3: If garage finish is not "No Garage", cars and size can't be 0
+          if (finishValue > 0) {
+            if (carsValue === 0) {
+              garageCars.value = "1"; // Default to 1 car
+              showValidationMessage("Garage cars set to 1 because garage has a finish.");
+            }
+            if (sizeValue === 0) {
+              addErrorStyling(garageSize);
+              showValidationMessage("Please enter a garage size greater than 0 because garage has a finish.");
+            }
+          }
+
+          // Rule 4: If garage size > 0, cars can't be 0 and finish can't be "No Garage"
+          if (sizeValue > 0) {
+            if (carsValue === 0) {
+              garageCars.value = "1"; // Default to 1 car
+              showValidationMessage("Garage cars set to 1 because garage has size.");
+            }
+            if (finishValue === 0) {
+              garageFinish.value = "1"; // Default to "Unfinished"
+              showValidationMessage("Garage finish changed from 'No Garage' because garage has size.");
+            }
+          }
+        }
+
         // Clear error styling when user starts typing/selecting
         document.addEventListener("DOMContentLoaded", function () {
           var formElements = document.querySelectorAll("input, select");
@@ -462,6 +580,9 @@
               hideValidationMessage();
             });
           });
+
+          // Setup garage field interdependency validation
+          setupGarageValidation();
 
           // Auto-copy year built to year remodeled when form is submitted if year remodeled is empty
           var form = document.querySelector("form");
@@ -499,13 +620,14 @@
             <th onclick="sortTable(9)">Half Baths</th>
             <th onclick="sortTable(10)">Full Baths</th>
             <th onclick="sortTable(11)">Garage Cars</th>
-            <th onclick="sortTable(12)">Garage Size</th>
-            <th onclick="sortTable(13)">Kitchen Quality</th>
-            <th onclick="sortTable(14)">Exterior Quality</th>
-            <th onclick="sortTable(15)">Heating Quality</th>
-            <th onclick="sortTable(16)">Basement Quality</th>
-            <th onclick="sortTable(17)">Fireplace Quality</th>
-            <th onclick="sortTable(18)">Suggested Price</th>
+            <th onclick="sortTable(12)">Garage Finish</th>
+            <th onclick="sortTable(13)">Garage Size</th>
+            <th onclick="sortTable(14)">Kitchen Quality</th>
+            <th onclick="sortTable(15)">Exterior Quality</th>
+            <th onclick="sortTable(16)">Heating Quality</th>
+            <th onclick="sortTable(17)">Basement Quality</th>
+            <th onclick="sortTable(18)">Fireplace Quality</th>
+            <th onclick="sortTable(19)">Suggested Price</th>
           </tr>
         </thead>
         <tbody>
@@ -523,6 +645,12 @@
             <td>{{ row.half_baths }}</td>
             <td>{{ row.full_baths }}</td>
             <td>{{ row.garage_cars }}</td>
+            <td>{{ 
+              'Finished' if row.garage_finish == '3' else 
+              'Rough Finished' if row.garage_finish == '2' else 
+              'Unfinished' if row.garage_finish == '1' else 
+              'No Garage'
+            }}</td>
             <td>{{ row.garage_size }}</td>
             <td>{{ row.kitchen_qual if row.kitchen_qual else 'N/A' }}</td>
             <td>{{ row.exterior_qual if row.exterior_qual else 'N/A' }}</td>

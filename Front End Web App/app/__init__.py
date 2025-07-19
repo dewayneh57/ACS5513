@@ -84,6 +84,7 @@ def calculate():
         'half_baths': request.form.get('half_baths'),
         'full_baths': request.form.get('full_baths'),
         'garage_cars': request.form.get('garage_cars'),
+        'garage_finish': request.form.get('garage_finish', '0'),  # Default to 0 (No Garage)
         'garage_size': request.form.get('garage_size'),
         'kitchen_qual': request.form.get('kitchen_qual'),
         'exterior_qual': request.form.get('exterior_qual'),
