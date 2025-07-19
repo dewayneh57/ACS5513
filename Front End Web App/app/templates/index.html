@@ -25,7 +25,22 @@
     {% endfor %} {% endif %} {% endwith %}
 
     <div class="form-section">
-      <h2>House Details Form</h2>
+      <div class="form-header">
+        <h2>House Details Form</h2>
+        <div class="model-selection">
+          <label for="model_type">Prediction Model:</label>
+          <select id="model_type" name="model_type" title="Select the machine learning model for price prediction">
+            <option value="catboost" selected>CatBoost</option>
+            <option value="xgboost">XGBoost</option>
+            <option value="lightgbm">LightGBM</option>
+            <option value="random_forest">Random Forest</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Validation Message Area -->
+      <div id="validationMessage" class="validation-message" style="display: none;"></div>
+      
       <form method="post" action="/calculate">
         <!-- Row 1: Year Built and Year Remodeled -->
         <div class="form-field">
@@ -324,8 +339,9 @@
 
       <script>
         function validateForm() {
-          // Clear any existing error styling
+          // Clear any existing error styling and messages
           clearErrorStyling();
+          hideValidationMessage();
 
           var hasErrors = false;
 
@@ -333,7 +349,7 @@
           var overallQual = document.getElementById("overall_qual");
           if (overallQual.value === "" || overallQual.value === null) {
             addErrorStyling(overallQual);
-            alert("Please select an Overall Quality rating.");
+            showValidationMessage("Please select an Overall Quality rating.");
             hasErrors = true;
           }
 
@@ -365,13 +381,13 @@
             if (!isNaN(value)) {
               if (value < field.min) {
                 addErrorStyling(element);
-                alert(field.name + " cannot be less than " + field.min + ".");
+                showValidationMessage(field.name + " cannot be less than " + field.min + ".");
                 hasErrors = true;
                 break;
               }
               if (field.max && value > field.max) {
                 addErrorStyling(element);
-                alert(field.name + " cannot be greater than " + field.max + ".");
+                showValidationMessage(field.name + " cannot be greater than " + field.max + ".");
                 hasErrors = true;
                 break;
               }
@@ -379,6 +395,7 @@
           }
 
           // Check if at least one square footage value is provided and total > 0
+          // Include total ground floor in the validation check
           var firstFlr =
             parseFloat(document.getElementById("first_flr_sf").value) || 0;
           var secondFlr =
@@ -387,17 +404,21 @@
             parseFloat(document.getElementById("third_flr_sf").value) || 0;
           var bsmtLiving =
             parseFloat(document.getElementById("bsmt_living_sf").value) || 0;
+          var totalGround =
+            parseFloat(document.getElementById("total_ground_sf").value) || 0;
 
-          var totalSqFt = firstFlr + secondFlr + thirdFlr + bsmtLiving;
+          // Check if any square footage field has a value > 0
+          var hasSquareFootage = firstFlr > 0 || secondFlr > 0 || thirdFlr > 0 || bsmtLiving > 0 || totalGround > 0;
 
-          if (totalSqFt <= 0) {
+          if (!hasSquareFootage) {
             // Highlight all square footage fields if none have valid values
             addErrorStyling(document.getElementById("first_flr_sf"));
             addErrorStyling(document.getElementById("second_flr_sf"));
             addErrorStyling(document.getElementById("third_flr_sf"));
             addErrorStyling(document.getElementById("bsmt_living_sf"));
-            alert(
-              "Please enter at least one square footage value. The total living area must be greater than 0."
+            addErrorStyling(document.getElementById("total_ground_sf"));
+            showValidationMessage(
+              "Please enter at least one square footage value. At least one living area field must be greater than 0."
             );
             hasErrors = true;
           }
@@ -416,15 +437,29 @@
           });
         }
 
+        function showValidationMessage(message) {
+          var messageDiv = document.getElementById("validationMessage");
+          messageDiv.textContent = message;
+          messageDiv.style.display = "block";
+          messageDiv.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        function hideValidationMessage() {
+          var messageDiv = document.getElementById("validationMessage");
+          messageDiv.style.display = "none";
+        }
+
         // Clear error styling when user starts typing/selecting
         document.addEventListener("DOMContentLoaded", function () {
           var formElements = document.querySelectorAll("input, select");
           formElements.forEach(function (element) {
             element.addEventListener("input", function () {
               this.classList.remove("error");
+              hideValidationMessage();
             });
             element.addEventListener("change", function () {
               this.classList.remove("error");
+              hideValidationMessage();
             });
           });
 
@@ -452,29 +487,31 @@
         <table id="resultsTable">
         <thead>
           <tr>
-            <th onclick="sortTable(0)">Overall Quality</th>
-            <th onclick="sortTable(1)">Year Built</th>
-            <th onclick="sortTable(2)">Year Remod/Add</th>
-            <th onclick="sortTable(3)">1st Floor SF</th>
-            <th onclick="sortTable(4)">2nd Floor SF</th>
-            <th onclick="sortTable(5)">3rd Floor SF</th>
-            <th onclick="sortTable(6)">Basement Living SF</th>
-            <th onclick="sortTable(7)">Total Ground SF</th>
-            <th onclick="sortTable(8)">Half Baths</th>
-            <th onclick="sortTable(9)">Full Baths</th>
-            <th onclick="sortTable(10)">Garage Cars</th>
-            <th onclick="sortTable(11)">Garage Size</th>
-            <th onclick="sortTable(12)">Kitchen Quality</th>
-            <th onclick="sortTable(13)">Exterior Quality</th>
-            <th onclick="sortTable(14)">Heating Quality</th>
-            <th onclick="sortTable(15)">Basement Quality</th>
-            <th onclick="sortTable(16)">Fireplace Quality</th>
-            <th onclick="sortTable(17)">Suggested Price</th>
+            <th onclick="sortTable(0)">Model</th>
+            <th onclick="sortTable(1)">Overall Quality</th>
+            <th onclick="sortTable(2)">Year Built</th>
+            <th onclick="sortTable(3)">Year Remod/Add</th>
+            <th onclick="sortTable(4)">1st Floor SF</th>
+            <th onclick="sortTable(5)">2nd Floor SF</th>
+            <th onclick="sortTable(6)">3rd Floor SF</th>
+            <th onclick="sortTable(7)">Basement Living SF</th>
+            <th onclick="sortTable(8)">Total Ground SF</th>
+            <th onclick="sortTable(9)">Half Baths</th>
+            <th onclick="sortTable(10)">Full Baths</th>
+            <th onclick="sortTable(11)">Garage Cars</th>
+            <th onclick="sortTable(12)">Garage Size</th>
+            <th onclick="sortTable(13)">Kitchen Quality</th>
+            <th onclick="sortTable(14)">Exterior Quality</th>
+            <th onclick="sortTable(15)">Heating Quality</th>
+            <th onclick="sortTable(16)">Basement Quality</th>
+            <th onclick="sortTable(17)">Fireplace Quality</th>
+            <th onclick="sortTable(18)">Suggested Price</th>
           </tr>
         </thead>
         <tbody>
           {% for row in results %}
           <tr>
+            <td>{{ row.model_type.upper() if row.model_type else 'CATBOOST' }}</td>
             <td>{{ row.overall_qual }}</td>
             <td>{{ row.year_built }}</td>
             <td>{{ row.year_remod_add }}</td>

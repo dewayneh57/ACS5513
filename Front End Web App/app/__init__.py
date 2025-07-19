@@ -69,7 +69,10 @@ def calculate():
         return redirect(url_for('home'))
     
     # Collect all form inputs
+    model_type = request.form.get('model_type', 'catboost')  # Default to catboost
+    
     data = {
+        'model_type': model_type,
         'overall_qual': overall_qual,
         'year_built': request.form.get('year_built'),
         'year_remod_add': request.form.get('year_remod_add'),
@@ -89,7 +92,8 @@ def calculate():
         'fireplace_qual': request.form.get('fireplace_qual'),
     }
     # Placeholder for calculation result (replace with your model/prediction)
-    data['result'] = 'TBD'
+    # You can now use the model_type to determine which model to use
+    data['result'] = f'TBD ({model_type.upper()})'
     results.append(data)
-    flash('Calculation completed successfully!', 'success')
+    flash(f'Calculation completed successfully using {model_type.upper()} model!', 'success')
     return redirect(url_for('home'))
