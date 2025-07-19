@@ -3,190 +3,503 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flask Web App</title>
+    <title>Petabyte Pirates - House Price Calculator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
   </head>
   <body>
-    <div
-      style="
-        background-color: #87cefa;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        padding: 0.5em 0;
-      "
-    >
+    <div class="header">
       <img
         src="{{ url_for('static', filename='PBPirates.png') }}"
         alt="Petabyte Pirates Icon"
-        style="height: 180px; margin-left: 16px; margin-right: 16px"
       />
-      <span style="font-size: 2em; font-weight: bold; color: #222"
-        >Welcome to Petabyte Pirates!</span
-      >
+      <span class="title">Petabyte Pirates - House Price Calculator</span>
     </div>
-    <p>
-      On this page you can explore what a home should sell for by inputting
-      various parameters and pressing the calculate button.
-    </p>
-    <form method="post" action="/calculate">
-      <label for="overall_qual">Overall Quality (1-10):</label>
-      <input
-        type="number"
-        id="overall_qual"
-        name="overall_qual"
-        min="1"
-        max="10"
-        required
-        title="Overall material and finish quality of the house (1=Very Poor, 10=Excellent)"
-      /><br /><br />
 
-      <label for="gr_liv_area">Above ground Living Space (Sq Ft):</label>
-      <input
-        type="number"
-        id="gr_liv_area"
-        name="gr_liv_area"
-        min="0"
-        required
-        title="Above ground living area square feet (does not include basement)"
-      /><br /><br />
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div class="flash-message {{ category }}">{{ message }}</div>
+    {% endfor %} {% endif %} {% endwith %}
 
-      <label for="first_flr_sf"
-        >Ground (first) Floor Living Area (Sq Ft):</label
-      >
-      <input
-        type="number"
-        id="first_flr_sf"
-        name="first_flr_sf"
-        min="0"
-        required
-        title="Square feet of the ground (first) floor living area"
-      /><br /><br />
+    <div class="form-section">
+      <h2>House Details Form</h2>
+      <form method="post" action="/calculate">
+        <!-- Row 1: Year Built and Year Remodeled -->
+        <div class="form-field">
+          <label for="year_built">Year Built: <span class="required">*</span></label>
+          <input
+            type="number"
+            id="year_built"
+            name="year_built"
+            min="1800"
+            max="2025"
+            required
+            title="Year the house was originally built"
+          />
+        </div>
 
-      <label for="total_bsmt_sf">Total Basement Square Feet:</label>
-      <input
-        type="number"
-        id="total_bsmt_sf"
-        name="total_bsmt_sf"
-        min="0"
-        title="Total square feet of basement area (finished and unfinished)"
-      /><br /><br />
+        <div class="form-field">
+          <label for="year_remod_add">Year Remodeled:</label>
+          <input
+            type="number"
+            id="year_remod_add"
+            name="year_remod_add"
+            min="1800"
+            max="2025"
+            title="Year of last remodel or addition (leave blank if same as year built)"
+          />
+        </div>
 
-      <label for="total_baths">Total Number of Baths:</label>
-      <input
-        type="number"
-        id="total_baths"
-        name="total_baths"
-        min="0"
-        step="0.5"
-        required
-        title="Total number of bathrooms (full bath = 1, half bath = 0.5)"
-      /><br /><br />
+        <!-- Row 3: Half Baths and Full Baths -->
+        <div class="form-field">
+          <label for="half_baths">Number of Half Baths:</label>
+          <input
+            type="number"
+            id="half_baths"
+            name="half_baths"
+            min="0"
+            value="0"
+            title="Number of half bathrooms (toilet and sink only)"
+          />
+        </div>
 
-      <label for="fireplaces">Number of Fireplaces:</label>
-      <input
-        type="number"
-        id="fireplaces"
-        name="fireplaces"
-        min="0"
-        title="Number of fireplaces in the house"
-      /><br /><br />
+        <div class="form-field">
+          <label for="full_baths">Number of Full Baths:</label>
+          <input
+            type="number"
+            id="full_baths"
+            name="full_baths"
+            min="0"
+            value="0"
+            title="Number of full bathrooms (toilet, sink, and tub/shower)"
+          />
+        </div>
 
-      <label for="garage_area">Garage Square Feet:</label>
-      <input
-        type="number"
-        id="garage_area"
-        name="garage_area"
-        min="0"
-        title="Total square feet of the garage area.  If there is no garage, leave this field empty."
-      /><br /><br />
+        <!-- Row 4: Garage Cars and Garage Size -->
+        <div class="form-field">
+          <label for="garage_cars">Garage Cars:</label>
+          <select
+            id="garage_cars"
+            name="garage_cars"
+            title="Number of cars that can fit in the garage"
+          >
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4+</option>
+          </select>
+        </div>
 
-      <label for="garage_cars">Number of Car Garage:</label>
-      <select
-        id="garage_cars"
-        name="garage_cars"
-        title="Number of cars the garage can hold"
-      >
-        <option value="0" selected>No Garage</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3 or more</option></select
-      ><br /><br />
+        <div class="form-field">
+          <label for="garage_size">Garage Size (sq ft):</label>
+          <input
+            type="number"
+            id="garage_size"
+            name="garage_size"
+            min="0"
+            value="0"
+            title="Square footage of the garage"
+          />
+        </div>
 
-      <label for="garage_yr_blt">Year Garage Built (if detached):</label>
-      <input
-        type="number"
-        id="garage_yr_blt"
-        name="garage_yr_blt"
-        min="1900"
-        max="2025"
-        title="Year the garage was built (if detached)"
-      /><br /><br />
+        <!-- Square Footage Group Box -->
+        <div class="sqft-group-box">
+          <fieldset class="sqft-fieldset">
+            <legend>Square Footage Details <span class="required">*</span></legend>
+            
+            <div class="sqft-grid">
+              <!-- Row 1: 1st and 2nd Floor Square Feet -->
+              <div class="form-field">
+                <label for="first_flr_sf">1st Floor Living Area (sq ft):</label>
+                <input
+                  type="number"
+                  id="first_flr_sf"
+                  name="first_flr_sf"
+                  min="0"
+                  required
+                  title="Square feet of the first floor living area"
+                />
+              </div>
 
-      <label for="year_built">Year Built:</label>
-      <input
-        type="number"
-        id="year_built"
-        name="year_built"
-        min="1900"
-        max="2025"
-        title="Year the house was originally built"
-      /><br /><br />
+              <div class="form-field">
+                <label for="second_flr_sf">2nd Floor Living Area (sq ft):</label>
+                <input
+                  type="number"
+                  id="second_flr_sf"
+                  name="second_flr_sf"
+                  min="0"
+                  value="0"
+                  title="Square feet of the second floor living area (0 if single story)"
+                />
+              </div>
 
-      <label for="year_remod_add">Last Year Remodeled or Additions:</label>
-      <input
-        type="number"
-        id="year_remod_add"
-        name="year_remod_add"
-        min="1900"
-        max="2025"
-        title="Year of last remodel or addition (leave blank if never remodeled)"
-      /><br /><br />
+              <!-- Row 2: 3rd Floor and Basement Square Feet -->
+              <div class="form-field">
+                <label for="third_flr_sf">3rd Floor Living Area (sq ft):</label>
+                <input
+                  type="number"
+                  id="third_flr_sf"
+                  name="third_flr_sf"
+                  min="0"
+                  value="0"
+                  title="Square feet of the third floor living area (0 if not applicable)"
+                />
+              </div>
 
-      <button type="submit">Calculate</button>
-    </form>
+              <div class="form-field">
+                <label for="bsmt_living_sf">Basement Living Area (sq ft):</label>
+                <input
+                  type="number"
+                  id="bsmt_living_sf"
+                  name="bsmt_living_sf"
+                  min="0"
+                  value="0"
+                  title="Square feet of finished basement living area (0 if no basement or unfinished)"
+                />
+              </div>
 
-    {% if results and results|length > 0 %}
-    <h2>Calculation Results</h2>
-    <table
-      id="resultsTable"
-      border="1"
-      style="border-collapse: collapse; width: 100%"
-    >
-      <thead>
-        <tr>
-          <th onclick="sortTable(0)">Overall Qual</th>
-          <th onclick="sortTable(1)">Garage SF</th>
-          <th onclick="sortTable(2)">Living SF</th>
-          <th onclick="sortTable(3)">Ground Flr SF</th>
-          <th onclick="sortTable(4)">Garage Cars</th>
-          <th onclick="sortTable(5)">Total Baths</th>
-          <th onclick="sortTable(6)">Year Built</th>
-          <th onclick="sortTable(7)">Basement SF</th>
-          <th onclick="sortTable(8)">Year Remod/Add</th>
-          <th onclick="sortTable(9)">Garage Yr Built</th>
-          <th onclick="sortTable(10)">Fireplaces</th>
-          <th onclick="sortTable(11)">Suggested Price</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in results %}
-        <tr>
-          <td>{{ row.overall_qual }}</td>
-          <td>{{ row.garage_area }}</td>
-          <td>{{ row.gr_liv_area }}</td>
-          <td>{{ row.first_flr_sf }}</td>
-          <td>{{ row.garage_cars }}</td>
-          <td>{{ row.total_baths }}</td>
-          <td>{{ row.year_built }}</td>
-          <td>{{ row.total_bsmt_sf }}</td>
-          <td>{{ row.year_remod_add }}</td>
-          <td>{{ row.garage_yr_blt }}</td>
-          <td>{{ row.fireplaces }}</td>
-          <td>{{ row.result }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+              <!-- Row 3: Total Ground Floor (spanning both columns) -->
+              <div class="form-field sqft-total">
+                <label for="total_ground_sf">Total Ground Living Area (sq ft):</label>
+                <input
+                  type="number"
+                  id="total_ground_sf"
+                  name="total_ground_sf"
+                  min="0"
+                  required
+                  title="Total square feet of ground floor living area"
+                />
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Quality Attributes Group Box -->
+        <div class="quality-group-box">
+          <fieldset class="quality-fieldset">
+            <legend>Quality Attributes</legend>
+            
+            <div class="quality-grid">
+              <!-- Row 1: Overall Quality and Kitchen Quality -->
+              <div class="form-field">
+                <label for="overall_qual">Overall Quality: <span class="required">*</span></label>
+                <select
+                  id="overall_qual"
+                  name="overall_qual"
+                  required
+                  title="Overall material and finish quality of the house"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="kitchen_qual">Kitchen Quality:</label>
+                <select
+                  id="kitchen_qual"
+                  name="kitchen_qual"
+                  title="Kitchen quality rating"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+
+              <!-- Row 2: Exterior Quality and Heating Quality -->
+              <div class="form-field">
+                <label for="exterior_qual">Exterior Quality:</label>
+                <select
+                  id="exterior_qual"
+                  name="exterior_qual"
+                  title="Exterior material and finish quality"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="heating_qual">Heating Quality:</label>
+                <select
+                  id="heating_qual"
+                  name="heating_qual"
+                  title="Heating system quality rating"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+
+              <!-- Row 3: Basement Quality and Fireplace Quality -->
+              <div class="form-field">
+                <label for="basement_qual">Basement Quality:</label>
+                <select
+                  id="basement_qual"
+                  name="basement_qual"
+                  title="Basement quality rating"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="fireplace_qual">Fireplace Quality:</label>
+                <select
+                  id="fireplace_qual"
+                  name="fireplace_qual"
+                  title="Fireplace quality rating"
+                >
+                  <option value="">Select Quality</option>
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Fair</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Very Excellent</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="form-submit">
+          <button type="submit" onclick="return validateForm()">Calculate Price</button>
+        </div>
+      </form>
+
+      <script>
+        function validateForm() {
+          // Clear any existing error styling
+          clearErrorStyling();
+
+          var hasErrors = false;
+
+          // Check if Overall Quality is selected
+          var overallQual = document.getElementById("overall_qual");
+          if (overallQual.value === "" || overallQual.value === null) {
+            addErrorStyling(overallQual);
+            alert("Please select an Overall Quality rating.");
+            hasErrors = true;
+          }
+
+          // Validate all numeric fields for negative values
+          var numericFields = [
+            { id: "year_built", name: "Year Built", min: 1800, max: 2025 },
+            { id: "year_remod_add", name: "Year Remodeled", min: 1800, max: 2025, optional: true },
+            { id: "first_flr_sf", name: "1st Floor Square Feet", min: 0 },
+            { id: "second_flr_sf", name: "2nd Floor Square Feet", min: 0 },
+            { id: "third_flr_sf", name: "3rd Floor Square Feet", min: 0 },
+            { id: "bsmt_living_sf", name: "Basement Living Square Feet", min: 0 },
+            { id: "total_ground_sf", name: "Total Ground Square Feet", min: 0 },
+            { id: "half_baths", name: "Number of Half Baths", min: 0 },
+            { id: "full_baths", name: "Number of Full Baths", min: 0 },
+            { id: "garage_size", name: "Garage Size", min: 0 }
+          ];
+
+          for (var i = 0; i < numericFields.length; i++) {
+            var field = numericFields[i];
+            var element = document.getElementById(field.id);
+            var value = parseFloat(element.value);
+            
+            // Skip validation for optional fields that are empty
+            if (field.optional && (element.value === "" || isNaN(value))) {
+              continue;
+            }
+            
+            // Check for negative values or values outside range
+            if (!isNaN(value)) {
+              if (value < field.min) {
+                addErrorStyling(element);
+                alert(field.name + " cannot be less than " + field.min + ".");
+                hasErrors = true;
+                break;
+              }
+              if (field.max && value > field.max) {
+                addErrorStyling(element);
+                alert(field.name + " cannot be greater than " + field.max + ".");
+                hasErrors = true;
+                break;
+              }
+            }
+          }
+
+          // Check if at least one square footage value is provided and total > 0
+          var firstFlr =
+            parseFloat(document.getElementById("first_flr_sf").value) || 0;
+          var secondFlr =
+            parseFloat(document.getElementById("second_flr_sf").value) || 0;
+          var thirdFlr =
+            parseFloat(document.getElementById("third_flr_sf").value) || 0;
+          var bsmtLiving =
+            parseFloat(document.getElementById("bsmt_living_sf").value) || 0;
+
+          var totalSqFt = firstFlr + secondFlr + thirdFlr + bsmtLiving;
+
+          if (totalSqFt <= 0) {
+            // Highlight all square footage fields if none have valid values
+            addErrorStyling(document.getElementById("first_flr_sf"));
+            addErrorStyling(document.getElementById("second_flr_sf"));
+            addErrorStyling(document.getElementById("third_flr_sf"));
+            addErrorStyling(document.getElementById("bsmt_living_sf"));
+            alert(
+              "Please enter at least one square footage value. The total living area must be greater than 0."
+            );
+            hasErrors = true;
+          }
+
+          return !hasErrors;
+        }
+
+        function addErrorStyling(element) {
+          element.classList.add("error");
+        }
+
+        function clearErrorStyling() {
+          var errorElements = document.querySelectorAll(".error");
+          errorElements.forEach(function (element) {
+            element.classList.remove("error");
+          });
+        }
+
+        // Clear error styling when user starts typing/selecting
+        document.addEventListener("DOMContentLoaded", function () {
+          var formElements = document.querySelectorAll("input, select");
+          formElements.forEach(function (element) {
+            element.addEventListener("input", function () {
+              this.classList.remove("error");
+            });
+            element.addEventListener("change", function () {
+              this.classList.remove("error");
+            });
+          });
+
+          // Auto-copy year built to year remodeled when form is submitted if year remodeled is empty
+          var form = document.querySelector("form");
+          form.addEventListener("submit", function (event) {
+            var yearBuilt = document.getElementById("year_built").value;
+            var yearRemod = document.getElementById("year_remod_add");
+            
+            // If year built has a value but year remodeled is empty, copy year built to year remodeled
+            if (yearBuilt && !yearRemod.value) {
+              yearRemod.value = yearBuilt;
+            }
+          });
+        });
+      </script>
+
+      <!-- Section Separator -->
+      <hr class="section-separator" />
+
+      <!-- Results Section -->
+      {% if results and results|length > 0 %}
+      <div class="results-section">
+        <h2>Calculation Results</h2>
+        <table id="resultsTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Overall Quality</th>
+            <th onclick="sortTable(1)">Year Built</th>
+            <th onclick="sortTable(2)">Year Remod/Add</th>
+            <th onclick="sortTable(3)">1st Floor SF</th>
+            <th onclick="sortTable(4)">2nd Floor SF</th>
+            <th onclick="sortTable(5)">3rd Floor SF</th>
+            <th onclick="sortTable(6)">Basement Living SF</th>
+            <th onclick="sortTable(7)">Total Ground SF</th>
+            <th onclick="sortTable(8)">Half Baths</th>
+            <th onclick="sortTable(9)">Full Baths</th>
+            <th onclick="sortTable(10)">Garage Cars</th>
+            <th onclick="sortTable(11)">Garage Size</th>
+            <th onclick="sortTable(12)">Kitchen Quality</th>
+            <th onclick="sortTable(13)">Exterior Quality</th>
+            <th onclick="sortTable(14)">Heating Quality</th>
+            <th onclick="sortTable(15)">Basement Quality</th>
+            <th onclick="sortTable(16)">Fireplace Quality</th>
+            <th onclick="sortTable(17)">Suggested Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results %}
+          <tr>
+            <td>{{ row.overall_qual }}</td>
+            <td>{{ row.year_built }}</td>
+            <td>{{ row.year_remod_add }}</td>
+            <td>{{ row.first_flr_sf }}</td>
+            <td>{{ row.second_flr_sf }}</td>
+            <td>{{ row.third_flr_sf }}</td>
+            <td>{{ row.bsmt_living_sf }}</td>
+            <td>{{ row.total_ground_sf }}</td>
+            <td>{{ row.half_baths }}</td>
+            <td>{{ row.full_baths }}</td>
+            <td>{{ row.garage_cars }}</td>
+            <td>{{ row.garage_size }}</td>
+            <td>{{ row.kitchen_qual if row.kitchen_qual else 'N/A' }}</td>
+            <td>{{ row.exterior_qual if row.exterior_qual else 'N/A' }}</td>
+            <td>{{ row.heating_qual if row.heating_qual else 'N/A' }}</td>
+            <td>{{ row.basement_qual if row.basement_qual else 'N/A' }}</td>
+            <td>{{ row.fireplace_qual if row.fireplace_qual else 'N/A' }}</td>
+            <td>{{ row.result }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% endif %}
+
     <script>
       // Simple table sort function
       function sortTable(n) {
@@ -254,6 +567,5 @@
         }
       }
     </script>
-    {% endif %}
   </body>
 </html>
