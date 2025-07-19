@@ -526,8 +526,13 @@
             }
             if (sizeValue !== 0) {
               garageSize.value = "0";
+              garageSize.classList.remove("error"); // Clear error styling when auto-setting to 0
               showValidationMessage("Garage size set to 0 because garage cars is 0.");
             }
+            // Clear any existing error styling when cars is 0
+            garageSize.classList.remove("error");
+            garageFinish.classList.remove("error");
+            garageCars.classList.remove("error");
           }
           
           // Rule 2: If garage cars > 0, finish can't be "No Garage" and size can't be 0
