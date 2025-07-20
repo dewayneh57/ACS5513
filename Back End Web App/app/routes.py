@@ -15,38 +15,53 @@ def train():
     current_app.pricing_engine.train_model(features, prices)
     return jsonify({'message': 'Model trained successfully'}), 200
 
-@api.route('/api/predict', methods=['POST'])
-def predict():
-    if request.method == 'POST':
-        data = request.get_json()
-        features = data.get('features')
-        if not features:
-            return jsonify({'error': 'Features are required for prediction'}), 400
-    else:  # GET
-        features = {
-            'bedrooms': request.args.get('bedrooms', type=int),
-            'bathrooms': request.args.get('bathrooms', type=float),
-            'sqft': request.args.get('sqft', type=int),
-            'year_built': request.args.get('year_built', type=int),
-            'location': request.args.get('location', type=str)
-        }
-        features = {k: v for k, v in features.items() if v is not None}
-        if not features:
-            return jsonify({'error': 'Features are required for prediction'}), 400
+@api.route('/api/predict_with_model', methods=['POST'])
+def predict_with_model():
+    data = request.get_json()
+    
+    if not data:
+        print(f"Request data is required")
+        return jsonify({'error': 'Request data is required'}), 400
+    
+    model_name = data.get('model_type', 'catboost')
+    features = data.get('features', {})
 
+    # Allow empty or missing features - they will be set to 0 in the pricing engine
+    if features is None:
+        features = {}
+        print("Warning: No features provided, will use default values (0)")
+    
     try:
-        price = current_app.pricing_engine.predict_price(features)
-        message = "Price generated successfully."
+        prediction = current_app.pricing_engine.predict_with_model(model_name, features)
+        
+        response = {
+            'model_used': model_name,
+            'predicted_price': prediction,
+            'features': features,
+            'success': True
+        }
+        return jsonify(response), 200
+        
     except Exception as e:
-        price = None
-        message = f"Error generating price: {str(e)}"
+        print(f"Prediction failed for model {model_name}: {str(e)}")
+        response = {
+            'error': f"Prediction failed: {str(e)}",
+            'model_used': model_name,
+            'success': False
+        }
+        return jsonify(response), 500
 
-    response = {
-        **features,
-        'price': price,
-        'message': message if price is None else None
-    }
-    return jsonify(response), 200
+@api.route('/api/models', methods=['GET'])
+def get_available_models():
+    """Get list of available models"""
+    available_models = []
+    for model_name, model in current_app.pricing_engine.models.items():
+        available_models.append({
+            'name': model_name,
+            'available': model is not None
+        })
+    
+    return jsonify({'models': available_models}), 200
 
 def register_routes(app):
     app.register_blueprint(api)

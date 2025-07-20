@@ -27,21 +27,21 @@
     <div class="form-section">
       <div class="form-header">
         <h2>House Details Form</h2>
-        <div class="model-selection">
-          <label for="model_type">Prediction Model:</label>
-          <select id="model_type" name="model_type" title="Select the machine learning model for price prediction">
-            <option value="catboost" selected>CatBoost</option>
-            <option value="xgboost">XGBoost</option>
-            <option value="lightgbm">LightGBM</option>
-            <option value="random_forest">Random Forest</option>
-          </select>
-        </div>
       </div>
       
       <!-- Validation Message Area -->
       <div id="validationMessage" class="validation-message" style="display: none;"></div>
       
       <form method="post" action="/calculate">
+        <!-- Model Selection - moved inside the form -->
+        <div class="model-selection">
+          <label for="model_type">Prediction Model:</label>
+          <select id="model_type" name="model_type" title="Select the machine learning model for price prediction">
+            <option value="catboost" selected>CatBoost</option>
+            <option value="xgboost">XGBoost</option>
+            <option value="lightgbm">LightGBM</option>
+          </select>
+        </div>
         <!-- Row 1: Year Built and Year Remodeled -->
         <div class="form-field">
           <label for="year_built">Year Built: <span class="required">*</span></label>
@@ -485,9 +485,18 @@
           });
         }
 
-        function showValidationMessage(message) {
+        function showValidationMessage(message, type = 'error') {
           var messageDiv = document.getElementById("validationMessage");
           messageDiv.textContent = message;
+          
+          // Remove existing type classes
+          messageDiv.classList.remove('error', 'success', 'info');
+          
+          // Add the appropriate type class (default is error styling from CSS)
+          if (type !== 'error') {
+            messageDiv.classList.add(type);
+          }
+          
           messageDiv.style.display = "block";
           messageDiv.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -610,6 +619,9 @@
       {% if results and results|length > 0 %}
       <div class="results-section">
         <h2>Calculation Results</h2>
+        <p style="margin: 0 0 15px 0; color: #666; font-style: italic;">
+          💡 <strong>Tip:</strong> Click on any row to re-populate the form with those values for easy recalculation.
+        </p>
         <table id="resultsTable">
         <thead>
           <tr>
@@ -637,7 +649,26 @@
         </thead>
         <tbody>
           {% for row in results %}
-          <tr>
+          <tr class="clickable-row" onclick="populateFormFromRow(this)" title="Click to re-populate form with these values"
+              data-model-type="{{ row.model_type if row.model_type else 'catboost' }}"
+              data-overall-qual="{{ row.overall_qual }}"
+              data-year-built="{{ row.year_built }}"
+              data-year-remod-add="{{ row.year_remod_add }}"
+              data-first-flr-sf="{{ row.first_flr_sf }}"
+              data-second-flr-sf="{{ row.second_flr_sf }}"
+              data-third-flr-sf="{{ row.third_flr_sf }}"
+              data-bsmt-living-sf="{{ row.bsmt_living_sf }}"
+              data-total-ground-sf="{{ row.total_ground_sf }}"
+              data-half-baths="{{ row.half_baths }}"
+              data-full-baths="{{ row.full_baths }}"
+              data-garage-cars="{{ row.garage_cars }}"
+              data-garage-finish="{{ row.garage_finish }}"
+              data-garage-size="{{ row.garage_size }}"
+              data-kitchen-qual="{{ row.kitchen_qual if row.kitchen_qual else '' }}"
+              data-exterior-qual="{{ row.exterior_qual if row.exterior_qual else '' }}"
+              data-heating-qual="{{ row.heating_qual if row.heating_qual else '' }}"
+              data-basement-qual="{{ row.basement_qual if row.basement_qual else '' }}"
+              data-fireplace-qual="{{ row.fireplace_qual if row.fireplace_qual else '' }}">
             <td>{{ row.model_type.upper() if row.model_type else 'CATBOOST' }}</td>
             <td>{{ row.overall_qual }}</td>
             <td>{{ row.year_built }}</td>
@@ -671,6 +702,63 @@
       {% endif %}
 
     <script>
+      // Function to populate form from a clicked table row
+      function populateFormFromRow(row) {
+        // Get data attributes from the clicked row
+        const data = row.dataset;
+        
+        // Show feedback that the row was clicked
+        row.style.backgroundColor = '#e3f2fd';
+        setTimeout(() => {
+          row.style.backgroundColor = '';
+        }, 1000);
+        
+        // Debug: Log the model type data to see what we're getting
+        console.log('Model type from row data:', data.modelType);
+        console.log('All row data:', data);
+        
+        // Populate form fields - make sure model_type is set first and correctly
+        // Try multiple ways to get the model type due to potential case conversion issues
+        const modelType = data.modelType || data.modeltype || row.getAttribute('data-model-type') || 'catboost';
+        document.getElementById('model_type').value = modelType;
+        console.log('Set model_type dropdown to:', modelType);
+        
+        document.getElementById('overall_qual').value = data.overallQual || '';
+        document.getElementById('year_built').value = data.yearBuilt || '';
+        document.getElementById('year_remod_add').value = data.yearRemodAdd || '';
+        document.getElementById('first_flr_sf').value = data.firstFlrSf || '';
+        document.getElementById('second_flr_sf').value = data.secondFlrSf || '';
+        document.getElementById('third_flr_sf').value = data.thirdFlrSf || '';
+        document.getElementById('bsmt_living_sf').value = data.bsmtLivingSf || '';
+        document.getElementById('total_ground_sf').value = data.totalGroundSf || '';
+        document.getElementById('half_baths').value = data.halfBaths || '';
+        document.getElementById('full_baths').value = data.fullBaths || '';
+        document.getElementById('garage_cars').value = data.garageCars || '';
+        document.getElementById('garage_finish').value = data.garageFinish || '';
+        document.getElementById('garage_size').value = data.garageSize || '';
+        document.getElementById('kitchen_qual').value = data.kitchenQual || '';
+        document.getElementById('exterior_qual').value = data.exteriorQual || '';
+        document.getElementById('heating_qual').value = data.heatingQual || '';
+        document.getElementById('basement_qual').value = data.basementQual || '';
+        document.getElementById('fireplace_qual').value = data.fireplaceQual || '';
+        
+        // Clear any validation errors
+        clearErrorStyling();
+        hideValidationMessage();
+        
+        // Scroll to the top of the form
+        document.querySelector('.form-section').scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+        
+        // Show a brief message to the user including which model was selected
+        showValidationMessage(`Form populated with selected row data using ${modelType.toUpperCase()} model. You can modify values and recalculate.`, "info");
+        setTimeout(() => {
+          hideValidationMessage();
+        }, 3000);
+      }
+
       // Simple table sort function
       function sortTable(n) {
         var table,
