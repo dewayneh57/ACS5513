@@ -1,0 +1,80 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend to Heroku
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Backend to Heroku
+        uses: akhileshns/heroku-deploy@v3.12.14
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_BACKEND_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          appdir: "Back End Web App"
+          buildpack: heroku/python
+
+      - name: Verify Backend Deployment
+        run: |
+          echo "Backend deployed successfully!"
+          echo "App URL: https://${{ secrets.HEROKU_BACKEND_APP_NAME }}.herokuapp.com"
+
+  deploy-frontend:
+    name: Deploy Frontend to Heroku
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Heroku
+        uses: akhileshns/heroku-deploy@v3.12.14
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_FRONTEND_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          appdir: "Front End Web App"
+          buildpack: heroku/python
+
+      - name: Verify Frontend Deployment
+        run: |
+          echo "Frontend deployed successfully!"
+          echo "App URL: https://${{ secrets.HEROKU_FRONTEND_APP_NAME }}.herokuapp.com"
+
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Backend Deployment: ${{ needs.deploy-backend.result }}"
+          echo "Frontend Deployment: ${{ needs.deploy-frontend.result }}"
+          echo "=========================="
+
+          if [ "${{ needs.deploy-backend.result }}" = "success" ] && [ "${{ needs.deploy-frontend.result }}" = "success" ]; then
+            echo "✅ All deployments successful!"
+            echo "Backend: https://${{ secrets.HEROKU_BACKEND_APP_NAME }}.herokuapp.com"
+            echo "Frontend: https://${{ secrets.HEROKU_FRONTEND_APP_NAME }}.herokuapp.com"
+          else
+            echo "❌ Some deployments failed"
+          fi
