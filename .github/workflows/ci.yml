@@ -1,0 +1,319 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-build:
+    name: Build and Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      working-directory: ./Back End Web App
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Install additional packages that might be needed
+        pip install pytest pytest-flask flask-testing
+        
+    - name: Create mock model files for testing
+      working-directory: ./Back End Web App
+      run: |
+        mkdir -p models
+        # Create empty mock model files so the app doesn't crash during testing
+        touch models/CatBoost.pkl
+        touch models/XGBoost.pkl
+        touch models/LightGBM.pkl
+        
+    - name: Lint backend code
+      working-directory: ./Back End Web App
+      run: |
+        # Install flake8 for linting
+        pip install flake8
+        # Run linting (ignore line length and some flask-specific warnings)
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
+        
+    - name: Test backend application
+      working-directory: ./Back End Web App
+      run: |
+        # Set environment variables for testing
+        export FLASK_ENV=testing
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        
+        # Test if the application can start without errors
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        try:
+            from app import create_app
+            app = create_app()
+            print('Backend application created successfully')
+        except Exception as e:
+            print(f'Error creating backend app: {e}')
+            sys.exit(1)
+        "
+        
+    - name: Test backend API endpoints
+      working-directory: ./Back End Web App
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        from app import create_app
+        import json
+        
+        app = create_app()
+        with app.test_client() as client:
+            # Test health check
+            response = client.get('/health')
+            assert response.status_code == 200
+            print('Health check endpoint: OK')
+            
+            # Test prediction endpoint with sample data
+            test_data = {
+                'model': 'catboost',
+                'overall_qual': '8',
+                'year_built': '2000',
+                'first_flr_sf': '1000',
+                'second_flr_sf': '800',
+                'bsmt_living_sf': '500',
+                'garage_size': '400'
+            }
+            response = client.post('/api/predict_with_model', 
+                                 data=json.dumps(test_data),
+                                 content_type='application/json')
+            assert response.status_code == 200
+            print('Prediction endpoint: OK')
+            print('Backend tests passed!')
+        "
+
+  frontend-build:
+    name: Build and Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-frontend-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-frontend-
+          
+    - name: Install frontend dependencies
+      working-directory: ./Front End Web App
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Install testing dependencies
+        pip install pytest pytest-flask flask-testing requests
+        
+    - name: Lint frontend code
+      working-directory: ./Front End Web App
+      run: |
+        # Install flake8 for linting
+        pip install flake8
+        # Run linting on frontend code
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
+        
+    - name: Validate HTML templates
+      working-directory: ./Front End Web App
+      run: |
+        # Check if HTML templates exist and are valid
+        if [ -f "app/templates/index.html" ]; then
+          echo "Frontend template found: app/templates/index.html"
+          # Basic HTML validation - check for required elements
+          python -c "
+          with open('app/templates/index.html', 'r') as f:
+              content = f.read()
+              assert '<html' in content, 'Missing HTML tag'
+              assert '<form' in content, 'Missing form tag'
+              assert 'populateFormFromRow' in content, 'Missing JavaScript function'
+              print('HTML template validation: OK')
+          "
+        else
+          echo "Warning: Frontend template not found"
+        fi
+        
+    - name: Test frontend application
+      working-directory: ./Front End Web App
+      run: |
+        # Set environment variables for testing
+        export FLASK_ENV=testing
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        
+        # Test if the frontend application can start
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        try:
+            from app import create_app
+            app = create_app()
+            print('Frontend application created successfully')
+        except Exception as e:
+            print(f'Error creating frontend app: {e}')
+            sys.exit(1)
+        "
+        
+    - name: Test frontend routes
+      working-directory: ./Front End Web App
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        from app import create_app
+        
+        app = create_app()
+        with app.test_client() as client:
+            # Test main page
+            response = client.get('/')
+            assert response.status_code == 200
+            print('Main page route: OK')
+            
+            # Test that the page contains expected elements
+            assert b'House Price Prediction' in response.data or b'prediction' in response.data.lower()
+            print('Page content validation: OK')
+            print('Frontend tests passed!')
+        "
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Install dependencies for both apps
+      run: |
+        python -m pip install --upgrade pip
+        
+        # Install backend dependencies
+        if [ -f "Back End Web App/requirements.txt" ]; then
+          pip install -r "Back End Web App/requirements.txt"
+        fi
+        
+        # Install frontend dependencies
+        if [ -f "Front End Web App/requirements.txt" ]; then
+          pip install -r "Front End Web App/requirements.txt"
+        fi
+        
+        # Install testing tools
+        pip install requests pytest
+        
+    - name: Create mock models for integration testing
+      run: |
+        mkdir -p "Back End Web App/models"
+        touch "Back End Web App/models/CatBoost.pkl"
+        touch "Back End Web App/models/XGBoost.pkl"
+        touch "Back End Web App/models/LightGBM.pkl"
+        
+    - name: Integration test - App communication
+      run: |
+        echo "Integration tests would verify frontend-backend communication"
+        echo "In a full setup, this would:"
+        echo "1. Start both applications"
+        echo "2. Test API calls between frontend and backend"
+        echo "3. Verify end-to-end prediction workflow"
+        echo "4. Test error handling and edge cases"
+        echo "Integration testing framework ready for expansion"
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        
+    - name: Install code quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort safety bandit
+        
+    - name: Run code formatting check
+      run: |
+        echo "Checking code formatting with Black..."
+        black --check --diff "Back End Web App/app" "Front End Web App/app" || echo "Code formatting issues found"
+        
+    - name: Run import sorting check
+      run: |
+        echo "Checking import sorting with isort..."
+        isort --check-only --diff "Back End Web App/app" "Front End Web App/app" || echo "Import sorting issues found"
+        
+    - name: Run security checks
+      run: |
+        echo "Running security checks with bandit..."
+        bandit -r "Back End Web App/app" "Front End Web App/app" -f json || echo "Security issues found"
+        
+    - name: Check for known security vulnerabilities
+      run: |
+        echo "Checking for known vulnerabilities with safety..."
+        # Generate requirements for safety check
+        pip freeze > temp_requirements.txt
+        safety check -r temp_requirements.txt || echo "Security vulnerabilities found"
+        rm temp_requirements.txt
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build, integration-test, code-quality]
+    if: always()
+    
+    steps:
+    - name: Build Summary
+      run: |
+        echo "=== Build Summary ==="
+        echo "Backend Build: ${{ needs.backend-build.result }}"
+        echo "Frontend Build: ${{ needs.frontend-build.result }}"
+        echo "Integration Tests: ${{ needs.integration-test.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "===================="
+        
+        if [ "${{ needs.backend-build.result }}" = "success" ] && [ "${{ needs.frontend-build.result }}" = "success" ]; then
+          echo "✅ All core builds successful!"
+        else
+          echo "❌ Some builds failed"
+          exit 1
+        fi

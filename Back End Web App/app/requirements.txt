@@ -1,6 +1,0 @@
-Flask
-NumPy
-Pandas
-Matplotlib
-SciPy
-SciKit-Learn

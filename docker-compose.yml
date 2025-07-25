@@ -1,0 +1,45 @@
+# Deployment Configuration
+# This file contains deployment settings for the house price prediction applications
+
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./Back End Web App
+      dockerfile: Dockerfile
+    ports:
+      - "10000:10000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+    volumes:
+      - ./Back End Web App/models:/app/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./Front End Web App
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - BACKEND_URL=http://backend:10000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    driver: bridge
