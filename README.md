@@ -9,29 +9,6 @@ This repository contains code, data, and reports for the analysis and modeling o
 - Apply statistical tests and transformations
 - Build and evaluate predictive models for house prices
 
-## Repository Structure
-
-- **acs_5513_petabyte_pirates_project_deliverable_1.py**  
-  Main Python script for data loading, cleaning, EDA, and modeling using the Ames Housing dataset.
-
-- **AmesHousing.csv**  
-  The primary dataset used for analysis and modeling.
-
-- **ACS_5513_Zillow_Research_Home_Value_Data.ipynb**  
-Notebook for additional research and analysis using Zillow home value data.
-
-- **Petabyte Pirates - Architectural Diagram.pptx**  
-  Project architecture and workflow diagram.
-
-- **ames_data_report.md**  
-  Markdown report summarizing findings and results.
-
-- **instructions.md**  
-  Guide for running scripts and configuring your development environment.
-
-- **Front End Web App/** and **Back End Web App/**  
-  (If populated) Folders for any web application components related to the project.
-
 ## Getting Started
 
 ### Prerequisites
@@ -60,7 +37,7 @@ You can open and run the Jupyter notebooks in Google Colab or locally with Jupyt
 ## Team
 
 - Sean Miller
-- Dewayne Hofenstien
+- Dewayne Hafenstein
 - Farhan Hassan 
 
 ## Data Sources
