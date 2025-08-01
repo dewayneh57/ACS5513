@@ -20,7 +20,6 @@ Neighborhood Box Plot from Project Deliverable 1
 
 ![Neighborhood Box Plot from Project Deliverable 1](../images/neighborhood_box_plots.png)
 
-
 In total, the one-hot encoded neighborhoods accounted for a collective 1% importance factor in the Random Forest Regressor model. Upon further analysis, neighborhoods in the Ames dataset are an amalgamation of their home’s features. In other words, many of the other features - such as year built, overall quality, and garage finishings – are already “priced in,” resulting in little benefit with their inclusion in the final model. While 19 one-hot encoded neighborhood features made it to the data modeling phase based on their statistical significance calculated in notebook 1, trimming all results in a much cleaner, generalized, and user-friendly model that doesn’t sacrifice quality.
 
 In fact, nearly all one-hot encoded features were not entirely significant in terms of the regressor model’s feature importance calculation. Again, many of these features are already explained by other, more impactful features. For example, a poured concrete foundation is more likely to have a higher ordinally mapped exterior quality and overall quality than a home with a slab foundation.
@@ -33,37 +32,36 @@ Model Performance Comparison Graph Across All 9 Evaluated Models with Final 29 F
 
 ![Model Performance Comparison Graph Across All 9 Evaluated Models with Final 29 Features](../images/model_zoo_final_features.png)
 
-
 The final Data Frame prepped for model evaluation had 30 total features, which can be found in the[ data dictionary](https://docs.google.com/spreadsheets/d/1zRmdRlc2efk0RiQ3xv9OARQlnGgF3sbfwbhnpNbcv7Y/edit?gid=555263764#gid=555263764).
 
-| Feature | Feature Type | Raw User Input | RandomForest Regressor<br>Feature Importance |
-| --- | --- | --- | --- |
-| (Qual x SF Plus Garage) + (Garage Finish x Garage Area) | Engineered | FALSE | 0.746573274 |
-| Qual x SF Plus Garage | Engineered | FALSE | 0.07490927384 |
-| Qual x SF | Engineered | FALSE | 0.01216088569 |
-| Remodel Age | Engineered | FALSE | 0.01170308916 |
-| Gr Liv Area | Raw | TRUE | 0.01021667229 |
-| Year Remod/Add | Raw | TRUE | 0.009475487271 |
-| Total Bsmt SF | Raw | TRUE | 0.008376916287 |
-| Total SF Plus Garage | Engineered | FALSE | 0.008273243131 |
-| Garage Yr Blt | Raw | TRUE | 0.006890500739 |
-| House Age | Engineered | FALSE | 0.006251766493 |
-| Total SF | Engineered | FALSE | 0.005886440528 |
-| 1st Flr SF | Raw | TRUE | 0.00585227365 |
-| Fireplace Qu_Ord | Encoded | TRUE | 0.005527822946 |
-| Year Built | Raw | TRUE | 0.005293349685 |
-| Kitchen Qual_Ord | Encoded | TRUE | 0.005202609903 |
-| Garage Finish x Garage Area | Engineered | FALSE | 0.003886328288 |
-| Garage Finish x Garage Area x Garage Cars | Engineered | FALSE | 0.003714796372 |
-| Garage Cars x Garage Area | Engineered | FALSE | 0.003494794465 |
-| Bsmt Qual_Ord | Encoded | TRUE | 0.003331023943 |
-| Garage Area | Raw | FALSE | 0.003090706467 |
-| Heating QC_Ord | Encoded | TRUE | 0.002581292113 |
-| Total Baths | Engineered | FALSE | 0.002484430229 |
-| Overall Qual | Raw | TRUE | 0.001055998173 |
-| Full Bath | Raw | TRUE | 0.0009679173451 |
-| Garage Finish x Garage Cars | Engineered | FALSE | 0.0008335035559 |
-| Exter Qual_Ord | Encoded | TRUE | 0.000710615399 |
-| Garage Finish_Ord | Encoded | TRUE | 0.0006992030566 |
-| House Style__2Story | Encoded | FALSE | 0.0003994213446 |
-| Garage Cars | Raw | TRUE | 0.0003849920639 |
+| Feature                                                 | Feature Type | Raw User Input | RandomForest Regressor<br>Feature Importance |
+| ------------------------------------------------------- | ------------ | -------------- | -------------------------------------------- |
+| (Qual x SF Plus Garage) + (Garage Finish x Garage Area) | Engineered   | FALSE          | 0.746573274                                  |
+| Qual x SF Plus Garage                                   | Engineered   | FALSE          | 0.07490927384                                |
+| Qual x SF                                               | Engineered   | FALSE          | 0.01216088569                                |
+| Remodel Age                                             | Engineered   | FALSE          | 0.01170308916                                |
+| Gr Liv Area                                             | Raw          | TRUE           | 0.01021667229                                |
+| Year Remod/Add                                          | Raw          | TRUE           | 0.009475487271                               |
+| Total Bsmt SF                                           | Raw          | TRUE           | 0.008376916287                               |
+| Total SF Plus Garage                                    | Engineered   | FALSE          | 0.008273243131                               |
+| Garage Yr Blt                                           | Raw          | TRUE           | 0.006890500739                               |
+| House Age                                               | Engineered   | FALSE          | 0.006251766493                               |
+| Total SF                                                | Engineered   | FALSE          | 0.005886440528                               |
+| 1st Flr SF                                              | Raw          | TRUE           | 0.00585227365                                |
+| Fireplace Qu_Ord                                        | Encoded      | TRUE           | 0.005527822946                               |
+| Year Built                                              | Raw          | TRUE           | 0.005293349685                               |
+| Kitchen Qual_Ord                                        | Encoded      | TRUE           | 0.005202609903                               |
+| Garage Finish x Garage Area                             | Engineered   | FALSE          | 0.003886328288                               |
+| Garage Finish x Garage Area x Garage Cars               | Engineered   | FALSE          | 0.003714796372                               |
+| Garage Cars x Garage Area                               | Engineered   | FALSE          | 0.003494794465                               |
+| Bsmt Qual_Ord                                           | Encoded      | TRUE           | 0.003331023943                               |
+| Garage Area                                             | Raw          | FALSE          | 0.003090706467                               |
+| Heating QC_Ord                                          | Encoded      | TRUE           | 0.002581292113                               |
+| Total Baths                                             | Engineered   | FALSE          | 0.002484430229                               |
+| Overall Qual                                            | Raw          | TRUE           | 0.001055998173                               |
+| Full Bath                                               | Raw          | TRUE           | 0.0009679173451                              |
+| Garage Finish x Garage Cars                             | Engineered   | FALSE          | 0.0008335035559                              |
+| Exter Qual_Ord                                          | Encoded      | TRUE           | 0.000710615399                               |
+| Garage Finish_Ord                                       | Encoded      | TRUE           | 0.0006992030566                              |
+| House Style\_\_2Story                                   | Encoded      | FALSE          | 0.0003994213446                              |
+| Garage Cars                                             | Raw          | TRUE           | 0.0003849920639                              |

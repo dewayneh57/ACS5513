@@ -10,11 +10,11 @@ The XGBoost model is a gradient boosted decision tree regressor that is a powerf
 
 ## Analytic Approach
 
-* Target variable: **SalePrice** (the sale price of homes)
-* Inputs:
-    * Numeric features: GrLivArea, TotalBsmtSF, age/remodel metrics, bathroom counts, etc.
-    * Engineered features: Quality x Size interactions, overall condition indices, temporal metrics like year built and sale year
-    * Encoded categorical: Ordinal for features like FireplaceQu, KitchenQual, ExterQual.
+- Target variable: **SalePrice** (the sale price of homes)
+- Inputs:
+  - Numeric features: GrLivArea, TotalBsmtSF, age/remodel metrics, bathroom counts, etc.
+  - Engineered features: Quality x Size interactions, overall condition indices, temporal metrics like year built and sale year
+  - Encoded categorical: Ordinal for features like FireplaceQu, KitchenQual, ExterQual.
 
 ## Model Description
 
@@ -30,10 +30,9 @@ graph TD
     F --> G[Conclusion]
 ```
 
-* First it fills its missing values filled with column‐wise means via SimpleImputer(strategy==’mean’).
-* XBGRegressor is trained on the imputed dataset
-* The fitted model outputs continuous sale-price predictions on the 20% hold out test set.
-
+- First it fills its missing values filled with column‐wise means via SimpleImputer(strategy==’mean’).
+- XBGRegressor is trained on the imputed dataset
+- The fitted model outputs continuous sale-price predictions on the 20% hold out test set.
 
 ## Learners and Hyperparameters
 
@@ -47,6 +46,7 @@ XGBRegressor(
     random_state=42,
     n_jobs=-1)
 ```
+
 ## Results (Model Performance)
 
 ![Model Performance Comparison Charts for XGBoost model](../images/xgboost_model.png)
@@ -56,7 +56,6 @@ XGBRegressor(
 XGBoost’s built-in feature-gain metric identified OverallQual, GrLivArea and YearBuilt as the top drivers of sale price, with Neighborhood and TotalBsmtSF also ranking highly. These variables account for most of the model’s predictive power, confirming that home quality, living area, and property age
 
 The close clustering of points around the y=x line in the Actual vs. Predicted indicates that XGBoost captures the dominant linear and non-linear relationships in the data very well. However, a slight over and under prediction at the extreme high-end prices suggests that ultra-premium properties exhibit additional complexity, maybe due to unique amenities or bespoke features that the current feature set doesn’t fully capture.
-
 
 ## Conclusion and Discussions for Next Steps
 
